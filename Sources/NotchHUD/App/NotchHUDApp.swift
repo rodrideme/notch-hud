@@ -29,7 +29,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         let environment = AppEnvironment()
-        let sessionStore = SessionStore()
+        let sessionStore = SessionStore(liveSeconds: environment.liveSeconds)
         let pendingStore = PendingStore()
         let focusDispatcher = FocusDispatcher()
         let spoolWatcher = SpoolWatcher(spoolURL: environment.spoolURL, store: sessionStore)

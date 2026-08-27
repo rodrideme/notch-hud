@@ -8,7 +8,10 @@ struct AppEnvironment {
     let decisionsURL: URL
     let sessionAllowURL: URL
     let workingStaleSeconds: TimeInterval = 90
-    let dropSeconds: TimeInterval = 900
+    /// How long a session stays live before it moves to the history section.
+    let liveSeconds: TimeInterval = 900
+    /// How long finished work is kept and listed. Beyond this the spool file goes.
+    let dropSeconds: TimeInterval = 48 * 60 * 60
 
     init(fileManager: FileManager = .default) {
         let rootURL = fileManager.homeDirectoryForCurrentUser

@@ -2,6 +2,8 @@ import SwiftUI
 
 enum SessionStatus: String, Codable, Sendable {
     case starting, working, needs_me, done, unknown
+    /// The session itself closed (SessionEnd), not just a finished turn.
+    case ended
 }
 
 enum DisplayStatus: Hashable, Sendable {
@@ -44,7 +46,7 @@ extension SessionStatus {
             .working
         case .needs_me:
             .needsMe
-        case .done:
+        case .done, .ended:
             .done
         case .unknown:
             .idle

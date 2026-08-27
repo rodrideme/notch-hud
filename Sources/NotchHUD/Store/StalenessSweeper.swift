@@ -13,7 +13,7 @@ final class StalenessSweeper {
         spoolURL: URL,
         store: SessionStore,
         workingStaleSeconds: TimeInterval = 90,
-        dropSeconds: TimeInterval = 15 * 60,
+        dropSeconds: TimeInterval = 48 * 60 * 60,
         fileManager: FileManager = .default
     ) {
         self.spoolURL = spoolURL
@@ -55,9 +55,10 @@ final class StalenessSweeper {
                 didChangeStore = true
             }
 
-            let isTtylessAndFinished = sessions[index].terminal?.tty == nil
-                && (sessions[index].status == .done || sessions[index].status == .unknown)
-            if age > dropSeconds || isTtylessAndFinished {
+            // Upstream also deleted any ttyless finished session on the spot.
+            // Every VS Code extension session is ttyless, so that erased finished
+            // work within one 10s sweep. Age is the only drop rule now.
+            if age > dropSeconds {
                 removeSpoolFile(for: sessions[index].id)
                 deletedSessionIDs.insert(sessions[index].id)
                 didChangeStore = true

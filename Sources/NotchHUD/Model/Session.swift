@@ -51,6 +51,37 @@ struct Session: Identifiable, Sendable {
         status.displayStatus
     }
 
+    /// Whether the emitter recorded anything we could locate a window with.
+    /// A sort hint only — FocusDispatcher.canFocus stays authoritative for clicks.
+    var hasKnownWindow: Bool {
+        guard let terminal else {
+            return false
+        }
+
+        return terminal.tty != nil || terminal.entrypoint != nil || terminal.termProgram != nil
+    }
+
+    /// Finished work rather than a live session: either the session closed, or
+    /// it went quiet for longer than `liveSeconds`.
+    func isHistory(at now: Date, liveSeconds: TimeInterval) -> Bool {
+        if status == .ended {
+            return true
+        }
+
+        return now.timeIntervalSince(updatedAt) > liveSeconds
+    }
+
+    /// The raw Claude Code session id, without the emitter's `claude-` prefix.
+    var claudeSessionID: String? {
+        let prefix = "claude-"
+        guard agent == "claude-code", id.hasPrefix(prefix) else {
+            return nil
+        }
+
+        let rawID = String(id.dropFirst(prefix.count))
+        return rawID.isEmpty ? nil : rawID
+    }
+
     var elapsed: String {
         elapsed(at: Date())
     }

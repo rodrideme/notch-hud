@@ -40,7 +40,7 @@ struct NotchPanelView: View {
             }
 
             TimelineView(.periodic(from: .now, by: 30)) { context in
-                if store.sessions.isEmpty {
+                if store.sessions.isEmpty, store.recentSessions.isEmpty {
                     emptyState
                 } else {
                     ScrollView(.vertical) {
@@ -54,6 +54,22 @@ struct NotchPanelView: View {
                                     onSelect: focus,
                                     onGrantAccess: openAutomationSettings
                                 )
+                            }
+
+                            if !store.recentSessions.isEmpty {
+                                historyHeader
+
+                                ForEach(store.recentSessions) { session in
+                                    SessionRowView(
+                                        session: session,
+                                        now: context.date,
+                                        feedback: feedback[session.id],
+                                        canFocus: SessionResumer.canResume(session)
+                                            || focusDispatcher.canFocus(session),
+                                        onSelect: resume,
+                                        onGrantAccess: openAutomationSettings
+                                    )
+                                }
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -150,6 +166,37 @@ struct NotchPanelView: View {
                 .foregroundStyle(.white.opacity(0.48))
         }
         .frame(maxWidth: .infinity, minHeight: 64, alignment: .center)
+    }
+
+    private var historyHeader: some View {
+        HStack(spacing: 6) {
+            Text("LAST 48 HOURS")
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.32))
+            Rectangle()
+                .fill(.white.opacity(0.08))
+                .frame(height: 1)
+        }
+        .padding(.top, 6)
+        .padding(.horizontal, 2)
+    }
+
+    /// Raise the project window first — VS Code sends the resume URL to whichever
+    /// window is frontmost — then reopen the conversation in it.
+    private func resume(_ session: Session) {
+        feedback[session.id] = nil
+
+        Task {
+            if focusDispatcher.canFocus(session) {
+                _ = await focusDispatcher.focus(session)
+            }
+
+            if SessionResumer.resume(session) {
+                return
+            }
+
+            show(.notFound, for: session.id, duration: .seconds(2))
+        }
     }
 
     private func focus(_ session: Session) {

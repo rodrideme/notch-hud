@@ -2,7 +2,7 @@
 
 status=${1:-}
 case $status in
-    starting|working|tool|needs_me|done|remove|notify) ;;
+    starting|working|tool|needs_me|done|ended|remove|notify) ;;
     *) exit 0 ;;
 esac
 
