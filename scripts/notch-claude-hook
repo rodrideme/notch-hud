@@ -13,6 +13,20 @@ session_id=$(printf '%s' "$payload" | jq -r '.session_id // empty' 2>/dev/null)
 cwd=$(printf '%s' "$payload" | jq -r '.cwd // empty' 2>/dev/null)
 model=$(printf '%s' "$payload" | jq -r '.model // empty' 2>/dev/null)
 
+# Claude Code stopped sending `model` in hook payloads, so the model chip never
+# rendered. The transcript records it per assistant message; the last one is
+# current even after a mid-session model switch. The claude- prefix is dropped
+# so the chip reads "Fable 5" rather than "Claude Fable 5".
+if [ -z "$model" ]; then
+    transcript=$(printf '%s' "$payload" | jq -r '.transcript_path // empty' 2>/dev/null)
+    if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+        model=$(tail -n 40 "$transcript" 2>/dev/null \
+            | jq -r 'select(.message.model? != null) | .message.model' 2>/dev/null \
+            | tail -n 1 \
+            | sed 's/^claude-//')
+    fi
+fi
+
 [ -n "$session_id" ] || exit 0
 
 script_dir=$(CDPATH= cd -P "$(dirname "$0")" 2>/dev/null && pwd)
