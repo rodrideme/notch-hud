@@ -97,6 +97,8 @@ enum SessionChipStyle {
             "Terminal"
         case "iTerm.app", "iTerm2":
             "iTerm2"
+        case "vscode":
+            "VS Code"
         default:
             termProgram
         }

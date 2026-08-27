@@ -66,7 +66,13 @@ find_tty() {
 }
 
 terminal_tty=$(find_tty)
-[ -n "$terminal_tty" ] || exit 0
+# A tty proves a human is attached. Claude Code running as the VS Code extension
+# has no tty at all, yet a human is just as present, so accept that entrypoint
+# too. Everything else - launchd, cron, headless agents - stays ungated and
+# keeps Claude's own permission flow.
+if [ -z "$terminal_tty" ] && [ "${CLAUDE_CODE_ENTRYPOINT:-}" != claude-vscode ]; then
+    exit 0
+fi
 
 tool_name=$(printf '%s' "$payload" | jq -r '.tool_name // empty' 2>/dev/null) || exit 0
 session_id=$(printf '%s' "$payload" | jq -r '.session_id // empty' 2>/dev/null) || exit 0

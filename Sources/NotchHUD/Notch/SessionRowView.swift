@@ -9,14 +9,11 @@ struct SessionRowView: View {
     let session: Session
     let now: Date
     let feedback: SessionRowFeedback?
+    let canFocus: Bool
     let onSelect: (Session) -> Void
     let onGrantAccess: () -> Void
 
     @State private var isHovering = false
-
-    private var canFocus: Bool {
-        session.terminal?.tty != nil
-    }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 5) {
@@ -27,7 +24,7 @@ struct SessionRowView: View {
             }
             .buttonStyle(.plain)
             .disabled(!canFocus)
-            .help(canFocus ? "Raise this session's terminal" : "Background session")
+            .help(canFocus ? "Raise this session's window" : "Background session")
 
             if feedback == .permissionDenied {
                 Button(action: onGrantAccess) {

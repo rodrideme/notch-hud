@@ -50,6 +50,7 @@ struct NotchPanelView: View {
                                     session: session,
                                     now: context.date,
                                     feedback: feedback[session.id],
+                                    canFocus: focusDispatcher.canFocus(session),
                                     onSelect: focus,
                                     onGrantAccess: openAutomationSettings
                                 )
@@ -152,7 +153,7 @@ struct NotchPanelView: View {
     }
 
     private func focus(_ session: Session) {
-        guard session.terminal?.tty != nil else { return }
+        guard focusDispatcher.canFocus(session) else { return }
         feedback[session.id] = nil
 
         Task {

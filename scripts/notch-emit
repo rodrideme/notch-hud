@@ -141,6 +141,37 @@ find_tty() {
 
 terminal_tty=$(find_tty)
 
+# Find the VS Code window this session belongs to. Claude Code running as the
+# VS Code extension has no tty anywhere in its ppid chain, so find_tty returns
+# empty and every tty-based focus strategy misses it. The per-window extension
+# host ("Code Helper (Plugin)") is the closest thing to a window handle.
+# VSCODE_PID is the shared Electron main process, not per-window - record it,
+# but never identify a window with it.
+find_vscode_host_pid() {
+    pid=$$
+    i=0
+    while [ "$pid" -gt 1 ] && [ "$i" -lt 25 ]; do
+        c=$(ps -o comm= -p "$pid" 2>/dev/null)
+        case "$c" in
+            *"Code Helper (Plugin)") printf '%s\n' "$pid"; return 0 ;;
+        esac
+        pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+        [ -z "$pid" ] && break
+        i=$((i+1))
+    done
+    return 0
+}
+
+vscode_host_pid=$(find_vscode_host_pid)
+
+# The extension sets no TERM_PROGRAM. Report it as vscode so the row chip and
+# the focus strategy read one consistent value for both the extension and the
+# integrated terminal.
+term_program=${TERM_PROGRAM:-}
+if [ -z "$term_program" ] && [ "${CLAUDE_CODE_ENTRYPOINT:-}" = claude-vscode ]; then
+    term_program=vscode
+fi
+
 updated=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)
 tmp_file=$spool_dir/$id.json.tmp.$$
 old_payload={}
@@ -164,7 +195,11 @@ if jq -n \
     --arg tool_line "$tool_line" \
     --arg model "$model" \
     --arg updated "$updated" \
-    --arg term_program "${TERM_PROGRAM:-}" \
+    --arg term_program "$term_program" \
+    --arg entrypoint "${CLAUDE_CODE_ENTRYPOINT:-}" \
+    --arg vscode_host_pid "$vscode_host_pid" \
+    --arg vscode_pid "${VSCODE_PID:-}" \
+    --arg workspace_name "$project" \
     --arg tty "$terminal_tty" \
     --arg iterm_session_id "${ITERM_SESSION_ID:-}" \
     --arg wezterm_pane "${WEZTERM_PANE:-}" \
@@ -194,7 +229,11 @@ if jq -n \
             itermSessionId: (if $iterm_session_id == "" then null else $iterm_session_id end),
             weztermPane: (if $wezterm_pane == "" then null else $wezterm_pane end),
             kittyWindowId: (if $kitty_window_id == "" then null else $kitty_window_id end),
-            windowId: (if $window_id == "" then null else $window_id end)
+            windowId: (if $window_id == "" then null else $window_id end),
+            entrypoint: (if $entrypoint == "" then null else $entrypoint end),
+            vscodeHostPid: (if $vscode_host_pid == "" then null else $vscode_host_pid end),
+            vscodePid: (if $vscode_pid == "" then null else $vscode_pid end),
+            workspaceName: (if $workspace_name == "" then null else $workspace_name end)
         } | with_entries(select(.value != null)))),
         source: "notch-emit"
     }
